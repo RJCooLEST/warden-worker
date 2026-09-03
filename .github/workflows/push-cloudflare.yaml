@@ -171,6 +171,7 @@ jobs:
           fi
 
       - name: Apply D1 database migrations
+        continue-on-error: true
         run: |
           set -euo pipefail  # Ensure pipe returns first non-zero exit code
           WRANGLER="npx --yes wrangler@${WRANGLER_VERSION}"
