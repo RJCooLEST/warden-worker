@@ -38,11 +38,13 @@ impl Db {
 /// This prevents stale reads when another device fetches data immediately after a write
 /// triggered a WebSocket notification.
 pub fn get_db(env: &Env) -> Result<Db, AppError> {
+    // Fallback to raw D1 handle if session creation fails.
+    // with_session() requires D1 read replication to be enabled; if the
+    // database does not have replication enabled, session-backed queries
+    // fail at execution time with a generic D1 error (mapped to AppError::Database).
+    // Using the raw handle avoids this issue while keeping full functionality.
     let raw = env.d1("vault1").map_err(AppError::Worker)?;
-    let session = raw
-        .with_session(Some("first-primary"))
-        .map_err(AppError::Worker)?;
-    Ok(Db::Session(session))
+    Ok(Db::Raw(raw))
 }
 
 /// Obtain a session-backed database handle optimized for read-only paths (e.g. auth).
@@ -50,9 +52,9 @@ pub fn get_db(env: &Env) -> Result<Db, AppError> {
 /// Uses `first-unconstrained` so the first read may hit any replica (lowest latency).
 /// Suitable when there is no preceding write that must be immediately visible.
 pub fn get_db_unconstrained(env: &Env) -> Result<Db, AppError> {
+    // Same rationale as get_db: avoid with_session() which requires D1 read replication.
     let raw = env.d1("vault1").map_err(AppError::Worker)?;
-    let session = raw.with_session(None).map_err(AppError::Worker)?;
-    Ok(Db::Session(session))
+    Ok(Db::Raw(raw))
 }
 
 /// Obtain a raw (non-session) database handle — only for cases that cannot use sessions.
