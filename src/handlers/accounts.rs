@@ -154,10 +154,10 @@ pub async fn prelogin(
         "SELECT kdf_type, kdf_iterations, kdf_memory, kdf_parallelism FROM users WHERE email = ?1",
         email
     )
-    .map_err(|e| AppError::Worker(e))?
+    .map_err(|_| AppError::Database)?
     .first(None)
     .await
-    .map_err(|e| AppError::Worker(e))?;
+    .map_err(|_| AppError::Database)?;
 
     let (kdf_type, kdf_iterations, kdf_memory, kdf_parallelism) = if let Some(row) = row {
         let kdf_type = row

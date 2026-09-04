@@ -63,10 +63,10 @@ impl PasswordVerification {
 impl User {
     pub async fn find_by_email(db: &crate::db::Db, email: &str) -> Result<Option<Self>, AppError> {
         let row: Option<Value> = d1_query!(db, "SELECT * FROM users WHERE email = ?1", email)
-            .map_err(|e| AppError::Worker(e))?
+            .map_err(|_| AppError::Database)?
             .first(None)
             .await
-            .map_err(|e| AppError::Worker(e))?;
+            .map_err(|_| AppError::Database)?;
 
         row.map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
             .transpose()
