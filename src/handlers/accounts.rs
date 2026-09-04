@@ -149,11 +149,15 @@ pub async fn prelogin(
 
     let db = db::get_db(&env)?;
 
-    let stmt = db.prepare(
+    let row: Option<Value> = d1_query!(
+        db,
         "SELECT kdf_type, kdf_iterations, kdf_memory, kdf_parallelism FROM users WHERE email = ?1",
-    );
-    let query = stmt.bind(&[email.into()])?;
-    let row: Option<Value> = query.first(None).await.map_err(|_| AppError::Database)?;
+        email
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?;
 
     let (kdf_type, kdf_iterations, kdf_memory, kdf_parallelism) = if let Some(row) = row {
         let kdf_type = row
