@@ -358,9 +358,8 @@ async fn authenticate_password_grant(
 }
 
 async fn load_user_by_id(db: &crate::db::Db, user_id: &str) -> Result<User, AppError> {
-    let user_value: Option<Value> = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.into()])?
+    let user_value: Option<Value> = d1_query!(db, "SELECT * FROM users WHERE id = ?1", user_id)
+        .map_err(|_| AppError::Database)?
         .first(None)
         .await
         .map_err(|_| AppError::Database)?;
