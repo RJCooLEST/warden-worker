@@ -22,13 +22,21 @@ pub(crate) async fn list_user_twofactors(
     db: &crate::db::Db,
     user_id: &str,
 ) -> Result<Vec<TwoFactor>, AppError> {
-    db.prepare("SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype < 1000")
-        .bind(&[user_id.to_string().into()])?
-        .all()
-        .await
-        .map_err(|_| AppError::Database)?
-        .results::<TwoFactor>()
-        .map_err(|_| AppError::Database)
+    let rows: Vec<Value> = d1_query!(
+        db,
+        "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype < 1000",
+        user_id
+    )
+    .map_err(|_| AppError::Database)?
+    .all()
+    .await
+    .map_err(|_| AppError::Database)?
+    .results()
+    .map_err(|_| AppError::Database)?;
+
+    rows.into_iter()
+        .map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
+        .collect()
 }
 
 /// Whether the user has 2FA enabled.
@@ -69,9 +77,8 @@ pub async fn get_authenticator(
     let db = db::get_db(&env)?;
 
     // Verify master password
-    let user_value: Value = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.clone().into()])?
+    let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
+        .map_err(|_| AppError::Database)?
         .first(None)
         .await
         .map_err(|_| AppError::Database)?
@@ -81,15 +88,16 @@ pub async fn get_authenticator(
     validate_password_or_otp(&user, &data).await?;
 
     // Check if TOTP is already configured
-    let existing: Option<Value> = db
-        .prepare("SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2")
-        .bind(&[
-            user_id.clone().into(),
-            (TwoFactorType::Authenticator as i32).into(),
-        ])?
-        .first(None)
-        .await
-        .map_err(|_| AppError::Database)?;
+    let existing: Option<Value> = d1_query!(
+        db,
+        "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2",
+        &user_id,
+        TwoFactorType::Authenticator as i32
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?;
 
     let (enabled, key) = match existing {
         Some(tf_value) => {
@@ -116,9 +124,8 @@ pub async fn activate_authenticator(
     let db = db::get_db(&env)?;
 
     // Verify master password
-    let user_value: Value = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.clone().into()])?
+    let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
+        .map_err(|_| AppError::Database)?
         .first(None)
         .await
         .map_err(|_| AppError::Database)?
@@ -143,17 +150,18 @@ pub async fn activate_authenticator(
     }
 
     // Check if TOTP is already configured - reuse existing record for replay protection
-    let existing: Option<TwoFactor> = db
-        .prepare("SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2")
-        .bind(&[
-            user_id.clone().into(),
-            (TwoFactorType::Authenticator as i32).into(),
-        ])?
-        .first(None)
-        .await
-        .map_err(|_| AppError::Database)?
-        .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
-        .transpose()?;
+    let existing: Option<TwoFactor> = d1_query!(
+        db,
+        "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2",
+        &user_id,
+        TwoFactorType::Authenticator as i32
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?
+    .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
+    .transpose()?;
 
     // Get last_used from existing record to prevent replay during reconfiguration
     let previous_last_used = existing.as_ref().map(|tf| tf.last_used).unwrap_or(0);
@@ -224,9 +232,8 @@ pub async fn disable_twofactor(
     let db = db::get_db(&env)?;
 
     // Verify master password
-    let user_value: Value = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.clone().into()])?
+    let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
+        .map_err(|_| AppError::Database)?
         .first(None)
         .await
         .map_err(|_| AppError::Database)?
@@ -281,9 +288,8 @@ pub async fn disable_authenticator(
     }
 
     // Verify master password (OTP not supported in this minimal implementation)
-    let user_value: Value = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.clone().into()])?
+    let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
+        .map_err(|_| AppError::Database)?
         .first(None)
         .await
         .map_err(|_| AppError::Database)?
@@ -300,14 +306,18 @@ pub async fn disable_authenticator(
     .await?;
 
     // Fetch existing TOTP and verify key matches before deleting
-    let existing: Option<TwoFactor> = db
-        .prepare("SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2")
-        .bind(&[user_id.clone().into(), data.r#type.into()])?
-        .first(None)
-        .await
-        .map_err(|_| AppError::Database)?
-        .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
-        .transpose()?;
+    let existing: Option<TwoFactor> = d1_query!(
+        db,
+        "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype = ?2",
+        &user_id,
+        data.r#type
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?
+    .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
+    .transpose()?;
 
     let Some(tf) = existing else {
         return Err(AppError::BadRequest("TOTP not configured".to_string()));
@@ -361,13 +371,16 @@ pub async fn get_recover(
     let db = db::get_db(&env)?;
 
     // Verify master password
-    let user_value: Value = db
-        .prepare("SELECT * FROM users WHERE id = ?1")
-        .bind(&[user_id.clone().into()])?
-        .first(None)
-        .await
-        .map_err(|_| AppError::Database)?
-        .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
+    let user_value: Value = d1_query!(
+        db,
+        "SELECT * FROM users WHERE id = ?1",
+        &user_id
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?
+    .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
     validate_password_or_otp(&user, &data).await?;
@@ -399,13 +412,16 @@ async fn generate_recovery_code_for_user(
     user_id: &str,
 ) -> Result<(), AppError> {
     // Check if recovery code already exists
-    let user_value: Value = db
-        .prepare("SELECT totp_recover FROM users WHERE id = ?1")
-        .bind(&[user_id.into()])?
-        .first(None)
-        .await
-        .map_err(|_| AppError::Database)?
-        .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
+    let user_value: Value = d1_query!(
+        db,
+        "SELECT totp_recover FROM users WHERE id = ?1",
+        user_id
+    )
+    .map_err(|_| AppError::Database)?
+    .first(None)
+    .await
+    .map_err(|_| AppError::Database)?
+    .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
 
     let totp_recover: Option<String> = user_value
         .get("totp_recover")
@@ -431,17 +447,18 @@ async fn generate_recovery_code_for_user(
 
 /// Clear recovery code when no real 2FA providers remain.
 async fn clear_recovery_if_no_twofactor(db: &crate::db::Db, user_id: &str) -> Result<(), AppError> {
-    let remaining: Vec<TwoFactor> = db
-        .prepare("SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype < 1000 AND atype != ?2")
-        .bind(&[
-            user_id.to_string().into(),
-            (TwoFactorType::Remember as i32).into(),
-        ])?
-        .all()
-        .await
-        .map_err(|_| AppError::Database)?
-        .results()
-        .map_err(|_| AppError::Database)?;
+    let remaining: Vec<TwoFactor> = d1_query!(
+        db,
+        "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype < 1000 AND atype != ?2",
+        user_id,
+        &(TwoFactorType::Remember as i32)
+    )
+    .map_err(|_| AppError::Database)?
+    .all()
+    .await
+    .map_err(|_| AppError::Database)?
+    .results()
+    .map_err(|_| AppError::Database)?;
 
     if remaining.is_empty() {
         d1_query!(
