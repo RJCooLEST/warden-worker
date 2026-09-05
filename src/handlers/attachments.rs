@@ -143,7 +143,7 @@ pub(crate) async fn touch_cipher_updated_at(
         now,
         cipher_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
     Ok(())
@@ -206,7 +206,7 @@ pub async fn create_attachment_v2(
         now,
         cipher.organization_id,
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -287,7 +287,7 @@ pub async fn upload_attachment_v2_data(
             "DELETE FROM attachments_pending WHERE id = ?1",
             pending.id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         return Err(AppError::BadRequest(format!(
@@ -370,7 +370,7 @@ pub async fn upload_attachment_legacy(
         now,
         cipher.organization_id,
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -465,7 +465,7 @@ pub async fn delete_attachment(
     delete_storage_objects(&env, &[attachment.r2_key()]).await?;
 
     d1_query!(&db, "DELETE FROM attachments WHERE id = ?1", attachment.id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 
@@ -597,7 +597,7 @@ pub(crate) async fn list_attachment_keys_for_cipher_ids_json(
         .await
         .map_err(db::map_d1_json_error)?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     Ok(map_rows_to_keys(rows))
 }
@@ -615,9 +615,9 @@ pub(crate) async fn list_attachment_keys_for_user(
         .bind(&[user_id.into()])?
         .all()
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     Ok(map_rows_to_keys(rows))
 }
@@ -635,9 +635,9 @@ pub(crate) async fn list_attachment_keys_for_soft_deleted_before(
         .bind(&[cutoff_exclusive.into()])?
         .all()
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     Ok(map_rows_to_keys(rows))
 }
@@ -652,7 +652,7 @@ pub(crate) async fn ensure_cipher_for_user(
         .bind(&[cipher_id.into(), user_id.into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let cipher = cipher.ok_or_else(|| AppError::NotFound("Cipher not found".to_string()))?;
 
@@ -677,7 +677,7 @@ pub(crate) async fn fetch_attachment(
         .bind(&[attachment_id.into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("Attachment not found".to_string()))
 }
 
@@ -689,7 +689,7 @@ pub(crate) async fn fetch_pending_attachment(
         .bind(&[attachment_id.into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("Attachment not found".to_string()))
 }
 
@@ -707,7 +707,7 @@ async fn load_attachment_map_json(
         .await
         .map_err(db::map_d1_json_error)?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     Ok(build_attachment_map(attachments))
 }
@@ -994,7 +994,7 @@ async fn user_attachment_usage(
         .bind(&bindings)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let total = row
         .and_then(|v| v.get("total").cloned())

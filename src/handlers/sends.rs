@@ -931,7 +931,7 @@ pub async fn rotate_user_sends(
             send_data.id,
             user_id
         )
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
         statements.push(stmt);
     }
 

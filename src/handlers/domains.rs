@@ -123,7 +123,7 @@ pub async fn get_domains(claims: Claims, State(env): State<Arc<Env>>) -> Result<
         .bind(&[claims.sub.into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let row = row.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
@@ -185,10 +185,10 @@ pub async fn post_domains(
         now,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     notifications::publish_user_update(
         (*env).clone(),

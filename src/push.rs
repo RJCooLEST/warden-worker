@@ -301,7 +301,7 @@ pub async fn user_has_push_device(env: &Env, user_id: &str) -> Result<bool, AppE
         .map_err(AppError::Worker)?
         .first(Some("cnt"))
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
     Ok(count.unwrap_or(0.0) > 0.0)
 }
 
@@ -317,7 +317,7 @@ pub async fn lookup_device_push_info(
         .map_err(AppError::Worker)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
     Ok(row.and_then(|r| serde_json::from_value(r).ok()))
 }
 

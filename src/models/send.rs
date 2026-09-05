@@ -306,7 +306,7 @@ impl SendDB {
             self.disabled,
             self.hide_email
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         Ok(())
@@ -333,7 +333,7 @@ impl SendDB {
             self.id,
             self.user_id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         Ok(())
@@ -346,7 +346,7 @@ impl SendDB {
             self.id,
             self.user_id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         Ok(())
@@ -362,7 +362,7 @@ impl SendDB {
             self.updated_at,
             self.id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         Ok(())
@@ -375,7 +375,7 @@ impl SendDB {
             .bind(&[id.into()])?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn find_by_id_and_user(
@@ -387,7 +387,7 @@ impl SendDB {
             .bind(&[id.into(), user_id.into()])?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn find_by_access_id(
@@ -405,9 +405,9 @@ impl SendDB {
             .bind(&[user_id.into()])?
             .all()
             .await
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .results()
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn find_expired(db: &crate::db::Db) -> Result<Vec<Self>, AppError> {
@@ -416,9 +416,9 @@ impl SendDB {
             .bind(&[now.into()])?
             .all()
             .await
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .results()
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     /// Total file-send storage bytes used by a user (finalized + pending).
@@ -428,7 +428,7 @@ impl SendDB {
             .bind(&[user_id.into()])?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
         let pending_total = pending
             .and_then(|v| v.get("total").cloned())
             .and_then(|v| v.as_i64())
@@ -439,7 +439,7 @@ impl SendDB {
             .bind(&[user_id.into()])?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
         let finalized_total = finalized
             .and_then(|v| v.get("total").cloned())
             .and_then(|v| v.as_i64())
@@ -450,11 +450,11 @@ impl SendDB {
 
     pub async fn delete_all_by_user(db: &crate::db::Db, user_id: &str) -> Result<(), AppError> {
         d1_query!(db, "DELETE FROM sends_pending WHERE user_id = ?1", user_id)
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .run()
             .await?;
         d1_query!(db, "DELETE FROM sends WHERE user_id = ?1", user_id)
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .run()
             .await?;
         Ok(())
@@ -511,7 +511,7 @@ impl SendDB {
             self.disabled,
             self.hide_email
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
         Ok(())
@@ -523,7 +523,7 @@ impl SendDB {
         self.updated_at = db::now_string();
 
         let delete_stmt = d1_query!(db, "DELETE FROM sends_pending WHERE id = ?1", self.id)
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
 
         let insert_stmt = d1_query!(
             db,
@@ -547,7 +547,7 @@ impl SendDB {
             self.disabled,
             self.hide_email
         )
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         db.batch(vec![delete_stmt, insert_stmt]).await?;
         Ok(())
@@ -562,7 +562,7 @@ impl SendDB {
             .bind(&[id.into(), user_id.into()])?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn find_pending_by_user(
@@ -573,9 +573,9 @@ impl SendDB {
             .bind(&[user_id.into()])?
             .all()
             .await
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .results()
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn find_stale_pending(
@@ -586,9 +586,9 @@ impl SendDB {
             .bind(&[cutoff.into()])?
             .all()
             .await
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .results()
-            .map_err(|_| AppError::Database)
+            .map_err(crate::db::map_d1_error)
     }
 
     pub async fn delete_stale_pending(db: &crate::db::Db, cutoff: &str) -> Result<u32, AppError> {
@@ -601,10 +601,10 @@ impl SendDB {
             "SELECT COUNT(*) as count FROM sends_pending WHERE created_at < ?1",
             cutoff
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first::<CountResult>(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
         let count = result.map(|r| r.count).unwrap_or(0);
 
         if count > 0 {
@@ -613,7 +613,7 @@ impl SendDB {
                 "DELETE FROM sends_pending WHERE created_at < ?1",
                 cutoff
             )
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .run()
             .await?;
         }

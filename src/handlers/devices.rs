@@ -96,7 +96,7 @@ pub async fn get_known_device(
         .bind(&[email.into()])?
         .first(Some("id"))
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let is_known = if let Some(user_id) = user_id {
         Device::find_by_identifier_and_user(&db, &identifier, &user_id)

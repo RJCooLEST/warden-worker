@@ -359,10 +359,10 @@ async fn authenticate_password_grant(
 
 async fn load_user_by_id(db: &crate::db::Db, user_id: &str) -> Result<User, AppError> {
     let user_value: Option<Value> = d1_query!(db, "SELECT * FROM users WHERE id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let user_value = user_value.ok_or_else(|| AppError::BadRequest("invalid_grant".to_string()))?;
     serde_json::from_value(user_value).map_err(|_| AppError::Internal)
@@ -396,10 +396,10 @@ async fn maybe_upgrade_password_hash(
         &now,
         &user.id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     Ok(User {
         master_password_hash: new_hash,
@@ -654,10 +654,10 @@ pub async fn token(
                             new_last_used,
                             &tf.uuid
                         )
-                        .map_err(|_| AppError::Database)?
+                        .map_err(crate::db::map_d1_error)?
                         .run()
                         .await
-                        .map_err(|_| AppError::Database)?;
+                        .map_err(crate::db::map_d1_error)?;
 
                         should_issue_remember = payload.two_factor_remember == Some(1);
                     }
@@ -680,28 +680,28 @@ pub async fn token(
                             }
 
                             d1_query!(&db, "DELETE FROM twofactor WHERE user_uuid = ?1", &user.id)
-                                .map_err(|_| AppError::Database)?
+                                .map_err(crate::db::map_d1_error)?
                                 .run()
                                 .await
-                                .map_err(|_| AppError::Database)?;
+                                .map_err(crate::db::map_d1_error)?;
                             d1_query!(
                                 &db,
                                 "UPDATE users SET totp_recover = NULL WHERE id = ?1",
                                 &user.id
                             )
-                            .map_err(|_| AppError::Database)?
+                            .map_err(crate::db::map_d1_error)?
                             .run()
                             .await
-                            .map_err(|_| AppError::Database)?;
+                            .map_err(crate::db::map_d1_error)?;
                             d1_query!(
                                 &db,
                                 "UPDATE devices SET twofactor_remember = NULL WHERE user_id = ?1",
                                 &user.id
                             )
-                            .map_err(|_| AppError::Database)?
+                            .map_err(crate::db::map_d1_error)?
                             .run()
                             .await
-                            .map_err(|_| AppError::Database)?;
+                            .map_err(crate::db::map_d1_error)?;
                         } else {
                             return Err(AppError::BadRequest(
                                 "Recovery code is incorrect".to_string(),

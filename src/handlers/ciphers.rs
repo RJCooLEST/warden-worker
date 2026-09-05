@@ -42,7 +42,7 @@ async fn fetch_cipher_for_user(
         .bind(&[cipher_id.to_string().into(), user_id.to_string().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("Cipher not found".to_string()))
 }
 
@@ -240,7 +240,7 @@ pub async fn update_cipher(
                 attachment_id,
                 id
             )
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .run()
             .await;
 
@@ -340,7 +340,7 @@ pub async fn update_cipher_partial(
         id,
         user_id,
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -374,7 +374,7 @@ pub async fn soft_delete_cipher(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -411,7 +411,7 @@ pub async fn soft_delete_ciphers_bulk(
         claims.sub,
         body
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
     .map_err(db::map_d1_json_error)?;
@@ -459,7 +459,7 @@ pub async fn hard_delete_cipher(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -506,7 +506,7 @@ pub async fn hard_delete_ciphers_bulk(
         claims.sub,
         body
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
     .map_err(db::map_d1_json_error)?;
@@ -544,7 +544,7 @@ pub async fn restore_cipher(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -586,7 +586,7 @@ pub async fn restore_ciphers_bulk(
         claims.sub,
         body
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
     .map_err(db::map_d1_json_error)?;
@@ -633,7 +633,7 @@ pub async fn archive_cipher(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -677,7 +677,7 @@ pub async fn unarchive_cipher(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -717,7 +717,7 @@ pub async fn archive_ciphers_bulk(
         claims.sub,
         body
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
     .map_err(db::map_d1_json_error)?;
@@ -760,7 +760,7 @@ pub async fn unarchive_ciphers_bulk(
         claims.sub,
         body
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
     .map_err(db::map_d1_json_error)?;
@@ -838,7 +838,7 @@ pub async fn create_cipher_simple(
          cipher.folder_id,
          cipher.created_at,
          cipher.updated_at,
-    ).map_err(|_| AppError::Database)?
+    ).map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -937,7 +937,7 @@ pub async fn purge_vault(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
     let user: User = serde_json::from_value(user).map_err(|_| AppError::Internal)?;
 
@@ -959,13 +959,13 @@ pub async fn purge_vault(
 
     // Delete all user's ciphers (both active and soft-deleted)
     d1_query!(&db, "DELETE FROM ciphers WHERE user_id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 
     // Delete all user's folders
     d1_query!(&db, "DELETE FROM folders WHERE user_id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 

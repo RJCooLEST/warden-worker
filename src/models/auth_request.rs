@@ -130,10 +130,10 @@ impl AuthRequest {
             self.response_date.as_deref(),
             self.authentication_date.as_deref()
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         Ok(())
     }
@@ -160,30 +160,30 @@ impl AuthRequest {
             self.authentication_date.as_deref(),
             &self.id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         Ok(())
     }
 
     pub async fn delete(&self, db: &crate::db::Db) -> Result<(), AppError> {
         d1_query!(db, "DELETE FROM auth_requests WHERE id = ?1", &self.id)
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .run()
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
 
         Ok(())
     }
 
     pub async fn find_by_id(db: &crate::db::Db, id: &str) -> Result<Option<Self>, AppError> {
         let row: Option<Value> = d1_query!(db, "SELECT * FROM auth_requests WHERE id = ?1", id)
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .first(None)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
 
         row.map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
             .transpose()
@@ -200,10 +200,10 @@ impl AuthRequest {
             id,
             user_id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         row.map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
             .transpose()
@@ -225,12 +225,12 @@ impl AuthRequest {
             user_id,
             &cutoff
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .all()
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         rows.into_iter()
             .map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
@@ -243,14 +243,14 @@ impl AuthRequest {
             "DELETE FROM auth_requests WHERE creation_date < ?1",
             cutoff
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
         let changes = result
             .meta()
-            .map_err(|_| AppError::Database)?
+            .map_err(crate::db::map_d1_error)?
             .and_then(|m| m.changes)
             .unwrap_or(0) as u32;
 

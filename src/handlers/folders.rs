@@ -26,7 +26,7 @@ pub async fn list_folders(
         .all()
         .await?
         .results()
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let folders: Vec<FolderResponse> = folders_db.into_iter().map(|f| f.into()).collect();
 
@@ -51,7 +51,7 @@ pub async fn get_folder(
         &id,
         &claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await?
     .ok_or_else(|| {
@@ -89,7 +89,7 @@ pub async fn create_folder(
         folder.created_at,
         folder.updated_at
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -129,7 +129,7 @@ pub async fn delete_folder(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -162,7 +162,7 @@ pub async fn update_folder(
         id,
         claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await?
     .ok_or(AppError::NotFound("Folder not found".to_string()))?;
@@ -183,7 +183,7 @@ pub async fn update_folder(
         folder.id,
         folder.user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 

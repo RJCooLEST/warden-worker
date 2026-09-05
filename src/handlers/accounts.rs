@@ -154,10 +154,10 @@ pub async fn prelogin(
         "SELECT kdf_type, kdf_iterations, kdf_memory, kdf_parallelism FROM users WHERE email = ?1",
         email
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     let (kdf_type, kdf_iterations, kdf_memory, kdf_parallelism) = if let Some(row) = row {
         let kdf_type = row
@@ -357,7 +357,7 @@ pub async fn password_hint(
         .bind(&[email.into()])?
         .first(Some("master_password_hint"))
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     let hint = hint.and_then(|h| {
         let trimmed = h.trim();
@@ -390,7 +390,7 @@ pub async fn revision_date(
         .bind(&[claims.sub.into()])?
         .first(Some("updated_at"))
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     // convert the timestamp to a millisecond-level Unix timestamp
     let revision_date = updated_at
@@ -454,7 +454,7 @@ pub async fn post_profile(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
     let mut user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
@@ -470,10 +470,10 @@ pub async fn post_profile(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     let two_factor_enabled = two_factor_enabled(&db, user_id).await?;
     let profile = Profile::from_user(user, two_factor_enabled)?;
@@ -521,7 +521,7 @@ pub async fn put_avatar(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
     let mut user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
@@ -537,10 +537,10 @@ pub async fn put_avatar(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     let two_factor_enabled = two_factor_enabled(&db, user_id).await?;
     let profile = Profile::from_user(user, two_factor_enabled)?;
@@ -571,7 +571,7 @@ pub async fn delete_account(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
     let user: User = serde_json::from_value(user).map_err(|_| AppError::Internal)?;
 
@@ -598,19 +598,19 @@ pub async fn delete_account(
 
     // Delete all user's ciphers
     d1_query!(&db, "DELETE FROM ciphers WHERE user_id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 
     // Delete all user's folders
     d1_query!(&db, "DELETE FROM folders WHERE user_id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 
     // Delete the user
     d1_query!(&db, "DELETE FROM users WHERE id = ?1", user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await?;
 
@@ -633,7 +633,7 @@ pub async fn post_password(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
     let user: User = serde_json::from_value(user).map_err(|_| AppError::Internal)?;
 
@@ -673,7 +673,7 @@ pub async fn post_password(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -699,7 +699,7 @@ pub async fn post_rotatekey(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
     let user: User = serde_json::from_value(user).map_err(|_| AppError::Internal)?;
 
@@ -852,7 +852,7 @@ pub async fn post_rotatekey(
             folder_id,
             user_id
         )
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
         folder_statements.push(stmt);
     }
     db::execute_in_batches(&db, folder_statements, batch_size).await?;
@@ -880,7 +880,7 @@ pub async fn post_rotatekey(
             cipher_id,
             user_id
         )
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
         cipher_statements.push(stmt);
 
         // Update attachments key and encrypted filename when rotating.
@@ -896,7 +896,7 @@ pub async fn post_rotatekey(
                     attachment_id,
                     cipher_id
                 )
-                .map_err(|_| AppError::Database)?;
+                .map_err(crate::db::map_d1_error)?;
                 attachment_statements.push(stmt);
             }
         }
@@ -952,7 +952,7 @@ pub async fn post_rotatekey(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -977,7 +977,7 @@ pub async fn post_kdf(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
     let user: User = serde_json::from_value(user).map_err(|_| AppError::Internal)?;
 
@@ -1048,7 +1048,7 @@ pub async fn post_kdf(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 
@@ -1073,7 +1073,7 @@ pub async fn post_sstamp(
         .bind(&[user_id.clone().into()])?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
     // Require master password hash (OTP not supported)
@@ -1102,7 +1102,7 @@ pub async fn post_sstamp(
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
 

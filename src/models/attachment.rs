@@ -59,11 +59,11 @@ impl AttachmentDB {
                 self.updated_at,
                 self.organization_id
             )
-            .map_err(|_| AppError::Database)?,
+            .map_err(crate::db::map_d1_error)?,
             d1_query!(db, "DELETE FROM attachments_pending WHERE id = ?1", self.id)
-                .map_err(|_| AppError::Database)?,
+                .map_err(crate::db::map_d1_error)?,
             d1_query!(db, "UPDATE ciphers SET updated_at = ?1 WHERE id = ?2", &now, self.cipher_id)
-                .map_err(|_| AppError::Database)?,
+                .map_err(crate::db::map_d1_error)?,
         ])
         .await?;
 

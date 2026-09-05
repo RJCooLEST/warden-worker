@@ -27,12 +27,12 @@ pub(crate) async fn list_user_twofactors(
         "SELECT * FROM twofactor WHERE user_uuid = ?1 AND atype < 1000",
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .all()
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .results()
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     rows.into_iter()
         .map(|row| serde_json::from_value(row).map_err(|_| AppError::Internal))
@@ -78,10 +78,10 @@ pub async fn get_authenticator(
 
     // Verify master password
     let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
@@ -94,10 +94,10 @@ pub async fn get_authenticator(
         &user_id,
         TwoFactorType::Authenticator as i32
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     let (enabled, key) = match existing {
         Some(tf_value) => {
@@ -125,10 +125,10 @@ pub async fn activate_authenticator(
 
     // Verify master password
     let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
@@ -156,10 +156,10 @@ pub async fn activate_authenticator(
         &user_id,
         TwoFactorType::Authenticator as i32
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
     .transpose()?;
 
@@ -178,10 +178,10 @@ pub async fn activate_authenticator(
         TwoFactorType::Authenticator as i32,
         TwoFactorType::Remember as i32
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     // Create new TOTP entry
     let mut twofactor = TwoFactor::new(user_id.clone(), TwoFactorType::Authenticator, key.clone());
@@ -197,10 +197,10 @@ pub async fn activate_authenticator(
         &twofactor.data,
         twofactor.last_used
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     // Generate recovery code if not exists
     generate_recovery_code_for_user(&db, &user_id).await?;
@@ -233,10 +233,10 @@ pub async fn disable_twofactor(
 
     // Verify master password
     let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
@@ -258,10 +258,10 @@ pub async fn disable_twofactor(
         &user_id,
         type_
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     log::info!("User {} disabled 2FA type {}", user_id, type_);
 
@@ -289,10 +289,10 @@ pub async fn disable_authenticator(
 
     // Verify master password (OTP not supported in this minimal implementation)
     let user_value: Value = d1_query!(db, "SELECT * FROM users WHERE id = ?1", &user_id)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .first(None)
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
@@ -312,10 +312,10 @@ pub async fn disable_authenticator(
         &user_id,
         data.r#type
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .map(|value| serde_json::from_value(value).map_err(|_| AppError::Internal))
     .transpose()?;
 
@@ -331,10 +331,10 @@ pub async fn disable_authenticator(
     }
 
     d1_query!(&db, "DELETE FROM twofactor WHERE uuid = ?1", &tf.uuid)
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
 
     log::info!(
         "User {} disabled authenticator (2FA type {})",
@@ -376,10 +376,10 @@ pub async fn get_recover(
         "SELECT * FROM users WHERE id = ?1",
         &user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
     let user: User = serde_json::from_value(user_value).map_err(|_| AppError::Internal)?;
 
@@ -417,10 +417,10 @@ async fn generate_recovery_code_for_user(
         "SELECT totp_recover FROM users WHERE id = ?1",
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .first(None)
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
 
     let totp_recover: Option<String> = user_value
@@ -436,10 +436,10 @@ async fn generate_recovery_code_for_user(
             &recovery_code,
             user_id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
     }
 
     Ok(())
@@ -453,12 +453,12 @@ async fn clear_recovery_if_no_twofactor(db: &crate::db::Db, user_id: &str) -> Re
         user_id,
         &(TwoFactorType::Remember as i32)
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .all()
     .await
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .results()
-    .map_err(|_| AppError::Database)?;
+    .map_err(crate::db::map_d1_error)?;
 
     if remaining.is_empty() {
         d1_query!(
@@ -466,10 +466,10 @@ async fn clear_recovery_if_no_twofactor(db: &crate::db::Db, user_id: &str) -> Re
             "UPDATE users SET totp_recover = NULL WHERE id = ?1",
             user_id
         )
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .run()
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
     }
 
     Ok(())

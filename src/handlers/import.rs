@@ -34,7 +34,7 @@ pub async fn import_data(
         "SELECT id FROM folders WHERE user_id = ?1",
         &claims.sub
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .all()
     .await?
     .results::<FolderIdRow>()?;
@@ -70,7 +70,7 @@ pub async fn import_data(
                     folder.created_at,
                     folder.updated_at
                 )
-                .map_err(|_| AppError::Database)?;
+                .map_err(crate::db::map_d1_error)?;
 
                 folder_statements.push(stmt);
                 id.clone()
@@ -95,7 +95,7 @@ pub async fn import_data(
                 folder.created_at,
                 folder.updated_at
             )
-            .map_err(|_| AppError::Database)?;
+            .map_err(crate::db::map_d1_error)?;
 
             folder_statements.push(stmt);
             new_id
@@ -169,7 +169,7 @@ pub async fn import_data(
              cipher.folder_id,
              cipher.created_at,
              cipher.updated_at,
-        ).map_err(|_| AppError::Database)?;
+        ).map_err(crate::db::map_d1_error)?;
 
         cipher_statements.push(stmt);
     }

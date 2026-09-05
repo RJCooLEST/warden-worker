@@ -87,7 +87,7 @@ pub async fn touch_user_updated_at(db: &Db, user_id: &str, now: &str) -> Result<
         now,
         user_id
     )
-    .map_err(|_| AppError::Database)?
+    .map_err(crate::db::map_d1_error)?
     .run()
     .await?;
     Ok(())

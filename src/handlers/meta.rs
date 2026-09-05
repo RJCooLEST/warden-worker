@@ -25,7 +25,7 @@ pub async fn alive(State(env): State<Arc<Env>>) -> Result<Json<String>, AppError
     db.prepare("SELECT 1 as ok")
         .first::<i32>(Some("ok"))
         .await
-        .map_err(|_| AppError::Database)?;
+        .map_err(crate::db::map_d1_error)?;
     Ok(now().await)
 }
 

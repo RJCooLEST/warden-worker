@@ -121,7 +121,7 @@ pub(crate) async fn decode_access_token(env: &Env, token: &str) -> Result<Claims
         .bind(&[claims.sub.clone().into()])?
         .first::<String>(Some("security_stamp"))
         .await
-        .map_err(|_| AppError::Database)?
+        .map_err(crate::db::map_d1_error)?
         .ok_or_else(|| AppError::Unauthorized("Invalid token".to_string()))?;
 
     if !constant_time_eq(claims.sstamp.as_bytes(), current_sstamp.as_bytes()) {
